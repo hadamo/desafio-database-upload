@@ -1,4 +1,4 @@
-import csvParse, { CsvError } from 'csv-parse';
+import csvParse from 'csv-parse';
 import fs from 'fs';
 import { getCustomRepository } from 'typeorm';
 
@@ -51,15 +51,18 @@ class ImportTransactionsService {
 		);
 		const categoriesRepository = getCustomRepository(CategoriesRepository);
 
-		const categories = new Map();
-		uniqueCategories.forEach(async title => {
-			const newCategory = await categoriesRepository.findCategoryOrCreate(
-				title,
-			);
-			categories.set(title, newCategory);
-		});
+		const categories = new Map<string, string>();
 
-		const transactions = transactionsRepository.create(
+		// eslint-disable-next-line no-restricted-syntax
+		for (const category of Array.from(uniqueCategories.values())) {
+			// eslint-disable-next-line no-await-in-loop
+			const newCategory = await categoriesRepository.findCategoryOrCreate(
+				category,
+			);
+			categories.set(newCategory.title, newCategory.id);
+		}
+
+		const transactions = await transactionsRepository.create(
 			parsedRows.map(({ title, type, value, category }: CSVRow) => ({
 				title,
 				type,
@@ -68,8 +71,9 @@ class ImportTransactionsService {
 			})),
 		);
 
-		transactionsRepository.insert(transactions);
+		transactionsRepository.save(transactions);
 
+		fs.promises.unlink(csvFilePath);
 		return transactions;
 	}
 }
