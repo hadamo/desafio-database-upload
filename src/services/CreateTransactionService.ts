@@ -26,7 +26,9 @@ class CreateTransactionService {
 
 		const balance = await transactionRepository.getBalance();
 
-		if (type === 'outcome' && balance.total < value) {
+		const absValue = Math.abs(value);
+
+		if (type === 'outcome' && balance.total < absValue) {
 			throw new AppError('Current balance is not enough!', 400);
 		}
 
@@ -40,7 +42,7 @@ class CreateTransactionService {
 
 		const transaction = transactionRepository.create({
 			title,
-			value,
+			value: absValue,
 			type,
 			category_id,
 		});
